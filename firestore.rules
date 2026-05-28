@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Dynamic type and structure helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTournament(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.accessPassword is string && data.accessPassword.size() > 0 && data.accessPassword.size() <= 100
+        && data.adminPassword is string && data.adminPassword.size() > 0 && data.adminPassword.size() <= 100
+        && data.results is map
+        && data.createdAt is timestamp
+        && (!('resultsSourceUrl' in data) || (data.resultsSourceUrl is string && data.resultsSourceUrl.size() <= 500));
+    }
+
+    function isValidPrediction(data) {
+      return data.participantName is string && data.participantName.size() > 0 && data.participantName.size() <= 100
+        && data.predictedResults is map
+        && data.createdAt is timestamp;
+    }
+
+    match /tournaments/{tournamentId} {
+      // Allow reading single tournament if the id matches
+      allow get: if isValidId(tournamentId);
+      
+      // Allow creation of tournament with validation
+      allow create: if isValidId(tournamentId) 
+        && isValidTournament(request.resource.data) 
+        && request.resource.data.createdAt == request.time;
+      
+      // Allow updating of tournament (results, name, passwords)
+      allow update: if isValidId(tournamentId) 
+        && isValidTournament(request.resource.data) 
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      match /predictions/{predictionId} {
+        // Enforce secure keys and validation
+        allow get: if isValidId(tournamentId) && isValidId(predictionId);
+        allow list: if isValidId(tournamentId);
+        
+        allow create: if isValidId(tournamentId) 
+          && isValidId(predictionId) 
+          && isValidPrediction(request.resource.data) 
+          && request.resource.data.createdAt == request.time;
+          
+        allow update: if isValidId(tournamentId) 
+          && isValidId(predictionId) 
+          && isValidPrediction(request.resource.data);
+          
+        allow delete: if isValidId(tournamentId) && isValidId(predictionId);
+      }
+    }
+  }
+}

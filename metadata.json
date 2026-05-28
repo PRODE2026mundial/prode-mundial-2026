@@ -1,0 +1,6 @@
+{
+  "name": "Prode Mundial 2026",
+  "description": "Aplicación para jugar y competir en el prode (pronósticos del Mundial 2026) en tiempo real con amigos y familiares.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

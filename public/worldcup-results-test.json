@@ -1,0 +1,37 @@
+[
+  {
+    "team1": "México",
+    "score1": 2,
+    "team2": "Sudáfrica",
+    "score2": 1,
+    "info": "México gana 2-1"
+  },
+  {
+    "homeTeam": "Corea del Sur",
+    "homeScore": 1,
+    "awayTeam": "República Checa",
+    "awayScore": 1,
+    "info": "Empate 1-1"
+  },
+  {
+    "local": "Canadá",
+    "goalsLocal": 0,
+    "visitante": "Bosnia y Herzegovina",
+    "goalsVisitante": 2,
+    "info": "Bosnia gana 2-0- visitante"
+  },
+  {
+    "teamA": "Estados Unidos",
+    "scoreA": 3,
+    "teamB": "Paraguay",
+    "scoreB": 1,
+    "info": "Estados Unidos gana 3-1"
+  },
+  {
+    "home_team": "Catar",
+    "home_score": 0,
+    "away_team": "Suiza",
+    "away_score": 2,
+    "info": "Suiza gana 2-0"
+  }
+]

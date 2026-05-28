@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "Tournament": {
+      "title": "Tournament",
+      "description": "A prediction tournament between friends and family with access credentials and real match results.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the tournament" },
+        "accessPassword": { "type": "string", "description": "Password required to view and join this tournament" },
+        "adminPassword": { "type": "string", "description": "Password required to admin and update real match results" },
+        "results": { "type": "object", "description": "Map of matchId to real outcomes ('1' | '2' | 'X' | null)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of creation" }
+      },
+      "required": ["name", "accessPassword", "adminPassword", "results", "createdAt"]
+    },
+    "Prediction": {
+      "title": "Prediction",
+      "description": "A set of predictions submitted by a single participant in the tournament.",
+      "type": "object",
+      "properties": {
+        "participantName": { "type": "string", "description": "The name of the participant" },
+        "predictedResults": { "type": "object", "description": "Map of matchId to predicted outcomes ('1' | '2' | 'X')" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of submission/update" }
+      },
+      "required": ["participantName", "predictedResults", "createdAt"]
+    }
+  },
+  "firestore": {
+    "tournaments/{tournamentId}": {
+      "schema": "Tournament",
+      "description": "Collection of active tournaments."
+    },
+    "tournaments/{tournamentId}/predictions/{predictionId}": {
+      "schema": "Prediction",
+      "description": "Subcollection of predictions for each participant inside a tournament."
+    }
+  }
+}
