@@ -22,6 +22,7 @@ export interface Prediction {
   participantName: string;
   predictedResults: Record<string, "1" | "2" | "X" | "">;
   createdAt: any;
+  userId: string | null;
 }
 
 export interface StandingsRow {
