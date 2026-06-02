@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { doc, collection, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, collection, onSnapshot, updateDoc, deleteDoc } from "firebase/firestore";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { db, auth, handleFirestoreError, OperationType } from "./firebase";
 import { Tournament, Prediction } from "./types";
@@ -29,6 +29,18 @@ export default function App() {
     predictedResults: Record<string, "1" | "2" | "X" | "">;
   } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+
+  const handleDeletePrediction = async (predictionId: string, participantName: string) => {
+    if (!activeTournament) return;
+    try {
+      const predRef = doc(db, "tournaments", activeTournament.id, "predictions", predictionId);
+      await deleteDoc(predRef);
+    } catch (err) {
+      console.error("Error deleting prediction:", err);
+      alert("No se pudo eliminar el prode. Intentá de nuevo.");
+    }
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -121,6 +133,7 @@ export default function App() {
     setShowPredictionForm(false);
     setShowAdminPanel(false);
     setSelectedParticipant(null);
+    setIsAdminAuthenticated(false);
     window.history.pushState({}, "", window.location.origin);
   };
 
@@ -194,13 +207,15 @@ export default function App() {
               </div>
               <div className="flex flex-wrap items-center gap-2.5">
                 {!showPredictionForm && !showAdminPanel && (
-                  <button onClick={() => { setSelectedParticipant(null); setShowPredictionForm(true); }} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 py-2 px-4 bg-sky-500 hover:bg-sky-400 text-white text-xs uppercase font-extrabold tracking-wider rounded-lg shadow-md shadow-sky-500/30 transition-colors cursor-pointer">
+                  <button onClick={() => { setSelectedParticipant(null); setShowPredictionForm(true); }}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 py-2 px-4 bg-sky-500 hover:bg-sky-400 text-white text-xs uppercase font-extrabold tracking-wider rounded-lg shadow-md shadow-sky-500/30 transition-colors cursor-pointer">
                     <Plus className="w-4 h-4" />
                     {currentUserPrediction ? "Modificar mi Prode" : "Cargar mi Prode"}
                   </button>
                 )}
                 {!showAdminPanel && !showPredictionForm && (
-                  <button onClick={() => { setSelectedParticipant(null); setShowAdminPanel(true); }} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 py-2 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs uppercase font-bold tracking-wider rounded-lg transition-colors border border-slate-800 cursor-pointer">
+                  <button onClick={() => { setSelectedParticipant(null); setShowAdminPanel(true); }}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 py-2 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs uppercase font-bold tracking-wider rounded-lg transition-colors border border-slate-800 cursor-pointer">
                     <Shield className="w-4 h-4 text-amber-500" /> Cargar Resultados
                   </button>
                 )}
@@ -214,7 +229,13 @@ export default function App() {
                   tournament={activeTournament}
                   currentUserPrediction={currentUserPrediction}
                   currentUserId={user.uid}
-                  onSelectParticipant={(name, results) => { setShowPredictionForm(false); setShowAdminPanel(false); setSelectedParticipant({ name, predictedResults: results }); }}
+                  onDeletePrediction={handleDeletePrediction}
+                  isAdminAuthenticated={isAdminAuthenticated}
+                  onSelectParticipant={(name, results) => {
+                    setShowPredictionForm(false);
+                    setShowAdminPanel(false);
+                    setSelectedParticipant({ name, predictedResults: results });
+                  }}
                 />
               </div>
               {(showPredictionForm || showAdminPanel || selectedParticipant) && (
@@ -223,7 +244,12 @@ export default function App() {
                     <PredictionForm tournament={activeTournament} existingPrediction={currentUserPrediction} currentUser={user} onSaveSuccess={() => setShowPredictionForm(false)} onCancel={() => setShowPredictionForm(false)} allPredictions={predictions} />
                   )}
                   {showAdminPanel && (
-                    <AdminPanel tournament={activeTournament} onUpdateSuccess={() => {}} onCancel={() => setShowAdminPanel(false)} />
+                    <AdminPanel
+                      tournament={activeTournament}
+                      onUpdateSuccess={() => {}}
+                      onCancel={() => { setShowAdminPanel(false); setIsAdminAuthenticated(false); }}
+                      onAdminAuth={(authenticated) => setIsAdminAuthenticated(authenticated)}
+                    />
                   )}
                   {selectedParticipant && (
                     <ParticipantPredictionsView participantName={selectedParticipant.name} predictedResults={selectedParticipant.predictedResults} tournament={activeTournament} onClose={() => setSelectedParticipant(null)} />

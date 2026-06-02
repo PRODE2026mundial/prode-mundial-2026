@@ -6,12 +6,13 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { auth } from "../firebase";
-import { Trophy } from "lucide-react";
+import { Trophy, Eye, EyeOff } from "lucide-react";
 
 export function AuthScreen() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -65,11 +66,8 @@ export function AuthScreen() {
           </p>
         </div>
 
-        <button
-          onClick={handleGoogle}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm transition-colors disabled:opacity-50 cursor-pointer"
-        >
+        <button onClick={handleGoogle} disabled={loading}
+          className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm transition-colors disabled:opacity-50 cursor-pointer">
           <svg className="w-5 h-5" viewBox="0 0 48 48">
             <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 32.6 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/>
             <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.1 18.9 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
@@ -87,56 +85,42 @@ export function AuthScreen() {
 
         <form onSubmit={handleEmailAuth} className="space-y-4">
           {error && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg font-medium">
-              {error}
-            </div>
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg font-medium">{error}</div>
           )}
           <div>
             <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              required
-              className="w-full px-3.5 py-2.5 text-sm bg-slate-950 border border-slate-800 rounded-lg text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-            />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@email.com" required
+              className="w-full px-3.5 py-2.5 text-sm bg-slate-950 border border-slate-800 rounded-lg text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500" />
           </div>
           <div>
             <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-              required
-              className="w-full px-3.5 py-2.5 text-sm bg-slate-950 border border-slate-800 rounded-lg text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                required
+                className="w-full px-3.5 py-2.5 pr-11 text-sm bg-slate-950 border border-slate-800 rounded-lg text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              />
+              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-white font-bold rounded-lg cursor-pointer shadow-lg shadow-sky-500/30 transition-colors text-sm"
-          >
+          <button type="submit" disabled={loading}
+            className="w-full py-3 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-white font-bold rounded-lg cursor-pointer shadow-lg shadow-sky-500/30 transition-colors text-sm">
             {loading ? "Cargando..." : mode === "login" ? "Iniciar Sesión" : "Crear Cuenta"}
           </button>
         </form>
 
         <p className="text-center text-xs text-slate-500">
           {mode === "login" ? (
-            <>
-              ¿No tenés cuenta?{" "}
-              <button onClick={() => { setMode("register"); setError(null); }} className="text-sky-400 font-bold hover:underline cursor-pointer">
-                Registrate acá
-              </button>
-            </>
+            <>¿No tenés cuenta?{" "}<button onClick={() => { setMode("register"); setError(null); }} className="text-sky-400 font-bold hover:underline cursor-pointer">Registrate acá</button></>
           ) : (
-            <>
-              ¿Ya tenés cuenta?{" "}
-              <button onClick={() => { setMode("login"); setError(null); }} className="text-sky-400 font-bold hover:underline cursor-pointer">
-                Iniciá sesión
-              </button>
-            </>
+            <>¿Ya tenés cuenta?{" "}<button onClick={() => { setMode("login"); setError(null); }} className="text-sky-400 font-bold hover:underline cursor-pointer">Iniciá sesión</button></>
           )}
         </p>
       </div>
