@@ -195,7 +195,21 @@ export default function App() {
                 <div className="flex items-center flex-wrap gap-2 sm:gap-3 text-xs text-slate-400 font-mono">
                   <span>ID: <strong className="text-sky-400">{activeTournament.id}</strong></span>
                   <span>•</span>
-                  <span>Participantes: <strong className="text-white">{predictions.length}</strong></span>
+                 <span>Participantes: <strong className="text-white">{predictions.length}</strong></span>
+                  {isAdminAuthenticated && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>•</span>
+                      <span className="inline-flex items-center gap-1 text-amber-400 font-bold text-[10px] uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        <Shield className="w-3 h-3" /> Modo Admin Activo
+                      </span>
+                      <button
+                        onClick={() => setIsAdminAuthenticated(false)}
+                        className="text-[10px] text-slate-500 hover:text-rose-400 underline cursor-pointer font-mono"
+                      >
+                        salir
+                      </button>
+                    </span>
+                  )}
                   {activeTournament.resultsSourceUrl && (
                     <><span>•</span>
                     <span className="inline-flex items-center gap-1 text-emerald-400 font-bold">
@@ -247,7 +261,7 @@ export default function App() {
                     <AdminPanel
                       tournament={activeTournament}
                       onUpdateSuccess={() => {}}
-                      onCancel={() => { setShowAdminPanel(false); setIsAdminAuthenticated(false); }}
+                     onCancel={() => setShowAdminPanel(false)}
                       onAdminAuth={(authenticated) => setIsAdminAuthenticated(authenticated)}
                     />
                   )}
