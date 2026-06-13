@@ -5,6 +5,7 @@ export interface Match {
   date: string;
   group: string;
   jornada: number;
+  kickoff: string;
 }
 
 export interface Tournament {
@@ -14,6 +15,7 @@ export interface Tournament {
   adminPassword: string;
   results: Record<string, "1" | "2" | "X" | null>;
   resultsSourceUrl?: string;
+  prizeText?: string;
   createdAt: any;
 }
 

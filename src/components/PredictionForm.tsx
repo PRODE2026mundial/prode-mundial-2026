@@ -4,7 +4,7 @@ import { User } from "firebase/auth";
 import { db, handleFirestoreError, OperationType } from "../firebase";
 import { Prediction, Tournament } from "../types";
 import { MATCHES } from "../data/matches";
-import { Save, AlertTriangle, CheckCircle, Award } from "lucide-react";
+import { Save, AlertTriangle, CheckCircle, Award, Lock } from "lucide-react";
 import { getCountryFlag } from "../data/flags";
 
 interface PredictionFormProps {
@@ -14,6 +14,14 @@ interface PredictionFormProps {
   onSaveSuccess: (savedPrediction: Prediction) => void;
   onCancel: () => void;
   allPredictions: Prediction[];
+}
+
+// Devuelve true si el partido ya arrancó (su fecha ya pasó)
+function isMatchLocked(kickoff: string): boolean {
+  const today = new Date();
+  const matchDay = new Date(kickoff + "T00:00:00");
+  // Bloqueado si el día del partido ya pasó (comparamos solo la fecha)
+  return today > matchDay;
 }
 
 export function PredictionForm({ tournament, existingPrediction, currentUser, onSaveSuccess, onCancel, allPredictions }: PredictionFormProps) {
@@ -37,12 +45,22 @@ export function PredictionForm({ tournament, existingPrediction, currentUser, on
     }
   }, [existingPrediction]);
 
+  // Seleccionar automáticamente la primera jornada con partidos editables
+  useEffect(() => {
+    const jornadaConEditable = [1, 2, 3].find((j) =>
+      MATCHES.filter((m) => m.jornada === j).some((m) => !isMatchLocked(m.kickoff))
+    );
+    if (jornadaConEditable) setSelectedJornada(jornadaConEditable);
+  }, []);
+
   const totalMatches = MATCHES.length;
   const completedCount = Object.values(predictionsMap).filter((val) => val !== "").length;
   const progressPercent = Math.round((completedCount / totalMatches) * 100);
   const currentJornadaMatches = MATCHES.filter((m) => m.jornada === selectedJornada);
+  const lockedCountInJornada = currentJornadaMatches.filter((m) => isMatchLocked(m.kickoff)).length;
 
-  const handleSelect = (matchId: string, choice: "1" | "2" | "X") => {
+  const handleSelect = (matchId: string, choice: "1" | "2" | "X", locked: boolean) => {
+    if (locked) return;
     setPredictionsMap((prev) => ({ ...prev, [matchId]: prev[matchId] === choice ? "" : choice }));
   };
 
@@ -67,7 +85,13 @@ export function PredictionForm({ tournament, existingPrediction, currentUser, on
         userId: currentUser.uid,
         createdAt: existingPrediction ? existingPrediction.createdAt : serverTimestamp()
       });
-      const saved: Prediction = { id: predictionId, participantName: cleanName, predictedResults: predictionsMap, createdAt: existingPrediction?.createdAt || new Date(), userId: currentUser.uid };
+      const saved: Prediction = {
+        id: predictionId,
+        participantName: cleanName,
+        predictedResults: predictionsMap,
+        createdAt: existingPrediction?.createdAt || new Date(),
+        userId: currentUser.uid
+      };
       setSuccess("¡Tu prode se guardó correctamente!");
       setTimeout(() => { onSaveSuccess(saved); }, 1500);
     } catch (err) {
@@ -85,7 +109,7 @@ export function PredictionForm({ tournament, existingPrediction, currentUser, on
             <Award className="w-5 h-5 text-sky-400" />
             {existingPrediction ? "Editar mi Prode" : "Cargar mi Prode"}
           </h2>
-          <p className="text-xs text-slate-400 mt-1">Completá tus predicciones para el torneo.</p>
+          <p className="text-xs text-slate-400 mt-1">Los partidos ya iniciados están bloqueados 🔒</p>
         </div>
         <div className="bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2 flex items-center gap-4">
           <div>
@@ -97,37 +121,66 @@ export function PredictionForm({ tournament, existingPrediction, currentUser, on
           </div>
         </div>
       </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg flex items-center gap-2"><AlertTriangle className="w-4 h-4 shrink-0" /><span>{error}</span></div>}
         {success && <div className="p-3.5 bg-sky-500/15 border border-sky-500/20 text-sky-400 text-xs rounded-lg flex items-center gap-2"><CheckCircle className="w-4 h-4 shrink-0" /><span>{success}</span></div>}
+
         <div className="p-4 bg-slate-950 rounded-xl border border-slate-800">
           <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Tu nombre / Apodo <span className="text-sky-400">*</span></label>
-          <input type="text" required placeholder="Ej. Tío Carlos, Pedro, Gabi" value={participantName} onChange={(e) => setParticipantName(e.target.value)} disabled={loading || !!existingPrediction}
+          <input type="text" required placeholder="Ej. Tío Carlos, Pedro, Gabi" value={participantName}
+            onChange={(e) => setParticipantName(e.target.value)} disabled={loading || !!existingPrediction}
             className="w-full px-3.5 py-2.5 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:opacity-75 disabled:cursor-not-allowed" />
-          {existingPrediction && <p className="text-[10px] text-slate-500 mt-1">Registrado como "{existingPrediction.participantName}". No podés cambiar el nombre.</p>}
+          {existingPrediction && <p className="text-[10px] text-slate-500 mt-1">Registrado como "{existingPrediction.participantName}".</p>}
         </div>
+
+        {/* Tabs de jornada */}
         <div className="flex border-b border-slate-800/80">
-          {[1, 2, 3].map((jNum) => (
-            <button key={jNum} type="button" onClick={() => setSelectedJornada(jNum)}
-              className={`flex-1 py-2.5 text-xs uppercase font-bold tracking-wider border-b-2 transition-colors cursor-pointer text-center ${selectedJornada === jNum ? "border-sky-500 text-sky-400 bg-slate-950/20" : "border-transparent text-slate-400 hover:text-slate-300"}`}>
-              Jornada {jNum}
-            </button>
-          ))}
+          {[1, 2, 3].map((jNum) => {
+            const jornadaMatches = MATCHES.filter((m) => m.jornada === jNum);
+            const allLocked = jornadaMatches.every((m) => isMatchLocked(m.kickoff));
+            return (
+              <button key={jNum} type="button" onClick={() => setSelectedJornada(jNum)}
+                className={`flex-1 py-2.5 text-xs uppercase font-bold tracking-wider border-b-2 transition-colors cursor-pointer text-center flex items-center justify-center gap-1 ${selectedJornada === jNum ? "border-sky-500 text-sky-400 bg-slate-950/20" : "border-transparent text-slate-400 hover:text-slate-300"}`}>
+                {allLocked && <Lock className="w-3 h-3" />}
+                Jornada {jNum}
+              </button>
+            );
+          })}
         </div>
+
+        {/* Aviso si hay partidos bloqueados en la jornada */}
+        {lockedCountInJornada > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-[11px] text-slate-400">
+            <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span><strong className="text-amber-400">{lockedCountInJornada} partido{lockedCountInJornada > 1 ? "s" : ""}</strong> de esta jornada ya comenzaron y no se pueden modificar.</span>
+          </div>
+        )}
+
         <div className="space-y-3">
           {currentJornadaMatches.map((match) => {
             const currentChoice = predictionsMap[match.id];
             const realResult = tournament.results[match.id];
             const hasRealResult = realResult !== undefined && realResult !== null;
             const isPredictionCorrect = hasRealResult && currentChoice === realResult;
+            const locked = isMatchLocked(match.kickoff);
+
             return (
-              <div key={match.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800/80 hover:border-slate-700 transition-colors flex flex-col gap-2">
+              <div key={match.id} className={`p-3 rounded-xl border flex flex-col gap-2 transition-colors ${locked ? "bg-slate-900/40 border-slate-800/40 opacity-75" : "bg-slate-950 border-slate-800/80 hover:border-slate-700"}`}>
                 <div className="flex justify-between items-center text-[10px] text-slate-500 font-mono px-1">
-                  <span>{match.group} • {match.date}</span>
+                  <span className="flex items-center gap-1">
+                    {locked && <Lock className="w-3 h-3 text-amber-600" />}
+                    {match.group} • {match.date}
+                  </span>
                   {hasRealResult && (
                     <div className="flex items-center gap-1.5">
-                      <span className="bg-slate-900 border border-slate-800 text-slate-300 font-bold px-1.5 py-0.5 rounded text-[9px] uppercase">{realResult === "1" ? "Gana Local" : realResult === "2" ? "Gana Visita" : "Empate"}</span>
-                      {currentChoice && (isPredictionCorrect ? <span className="bg-sky-500/10 text-sky-400 font-extrabold px-1.5 py-0.5 rounded text-[9px] border border-sky-500/20">+1 PTS</span> : <span className="bg-rose-500/10 text-rose-400 font-extrabold px-1.5 py-0.5 rounded text-[9px] border border-rose-500/20">0 PTS</span>)}
+                      <span className="bg-slate-900 border border-slate-800 text-slate-300 font-bold px-1.5 py-0.5 rounded text-[9px] uppercase">
+                        {realResult === "1" ? "Gana Local" : realResult === "2" ? "Gana Visita" : "Empate"}
+                      </span>
+                      {currentChoice && (isPredictionCorrect
+                        ? <span className="bg-sky-500/10 text-sky-400 font-extrabold px-1.5 py-0.5 rounded text-[9px] border border-sky-500/20">+1 PTS</span>
+                        : <span className="bg-rose-500/10 text-rose-400 font-extrabold px-1.5 py-0.5 rounded text-[9px] border border-rose-500/20">0 PTS</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -138,8 +191,16 @@ export function PredictionForm({ tournament, existingPrediction, currentUser, on
                   </div>
                   <div className="col-span-4 flex items-center justify-center gap-1 shrink-0 px-1 sm:px-2">
                     {(["1", "X", "2"] as const).map((opt) => (
-                      <button key={opt} type="button" onClick={() => handleSelect(match.id, opt)}
-                        className={`flex-1 py-1.5 rounded-lg text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer border ${currentChoice === opt ? "bg-sky-500 text-slate-950 border-sky-400 shadow-md shadow-sky-500/25" : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"}`}>
+                      <button key={opt} type="button"
+                        onClick={() => handleSelect(match.id, opt, locked)}
+                        disabled={locked}
+                        className={`flex-1 py-1.5 rounded-lg text-[9px] sm:text-[11px] font-black uppercase tracking-wider transition-all border ${
+                          locked
+                            ? "cursor-not-allowed opacity-50 bg-slate-900 border-slate-800 text-slate-600"
+                            : currentChoice === opt
+                            ? "cursor-pointer bg-sky-500 text-slate-950 border-sky-400 shadow-md shadow-sky-500/25"
+                            : "cursor-pointer bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"
+                        }`}>
                         {opt === "X" ? "EMPATE" : "GANA"}
                       </button>
                     ))}
@@ -153,6 +214,7 @@ export function PredictionForm({ tournament, existingPrediction, currentUser, on
             );
           })}
         </div>
+
         <div className="p-4 bg-slate-950 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-xs text-slate-400">Completaste <strong>{completedCount}</strong> de <strong>{totalMatches}</strong> partidos.</span>
           <div className="flex gap-2 w-full sm:w-auto">
